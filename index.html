@@ -619,6 +619,96 @@ select{width:100%;padding:11px 10px;border-radius:14px;border:1px solid var(--li
 .logout-fab svg{width:20px;height:20px;stroke:rgba(232,238,252,.85);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
 .hidden-by-role{display:none !important;}
 
+.inat-summary{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  font-size:13px;
+  line-height:1.35;
+  color:rgba(232,238,252,.92);
+}
+.inat-summary .sep{
+  color:rgba(255,255,255,.28);
+  font-weight:700;
+}
+.inat-summary .item{
+  white-space:nowrap;
+}
+.inat-summary .item.label{
+  color:var(--text);
+}
+.cli-inat-mini{
+  cursor:pointer;
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+}
+.cli-inat-mini:hover{
+  transform:translateY(-1px);
+}
+.cli-inat-mini:active{
+  transform:scale(.995);
+}
+.cli-inat-mini .k{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.04);
+}
+.cli-inat-mini.bucket60 .k{
+  color:var(--yellow);
+  border-color:rgba(241,196,15,.30);
+  background:rgba(241,196,15,.10);
+}
+.cli-inat-mini.bucket90 .k{
+  color:var(--red);
+  border-color:rgba(231,76,60,.35);
+  background:rgba(231,76,60,.10);
+}
+@media (max-width: 520px){
+  .inat-summary{
+    gap:8px;
+    font-size:12px;
+  }
+  .cli-inat-mini .k{
+    padding:5px 9px;
+    font-size:11px;
+  }
+}
+.chip{
+  padding:7px 14px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);
+  color:rgba(232,238,252,.82);
+  font-size:13px;
+  font-weight:800;
+  cursor:pointer;
+  transition:transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease, color .18s ease;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+}
+.chip:hover{
+  background:rgba(255,255,255,.10);
+  color:var(--text);
+}
+.chip.active{
+  background:linear-gradient(180deg, rgba(46,204,113,.22) 0%, rgba(46,204,113,.10) 100%);
+  border-color:rgba(46,204,113,.45);
+  color:#dff9ea;
+  box-shadow:0 10px 24px rgba(46,204,113,.14), inset 0 0 0 1px rgba(46,204,113,.16);
+  transform:translateY(-1px);
+}
+.chip.active:hover{
+  background:linear-gradient(180deg, rgba(46,204,113,.26) 0%, rgba(46,204,113,.12) 100%);
+}
+.res-op-positive{color:var(--green) !important;}
+.res-op-negative{color:var(--red) !important;}
+
+
 
 
 /* PWA / UX refinements */
@@ -1066,13 +1156,13 @@ select{width:100%;padding:11px 10px;border-radius:14px;border:1px solid var(--li
           <div class="right" style="color:var(--muted);font-size:12px;">(base completa)</div>
         </div>
         <div class="home-lucro row2">
-          <div class="mini">
+          <div class="mini cli-inat-mini bucket60" id="cliInat60Card">
             <div class="k">+60 dias</div>
-            <div class="v2" id="cliInat60">—</div>
+            <div class="v2 inat-summary" id="cliInat60">—</div>
           </div>
-          <div class="mini">
+          <div class="mini cli-inat-mini bucket90" id="cliInat90Card">
             <div class="k">+90 dias</div>
-            <div class="v2" id="cliInat90">—</div>
+            <div class="v2 inat-summary" id="cliInat90">—</div>
           </div>
         </div>
         
@@ -1235,7 +1325,7 @@ select{width:100%;padding:11px 10px;border-radius:14px;border:1px solid var(--li
       <div class="home-card home-lucro resCard" id="cardResOpMes">
         <div class="k" id="resTitleOpMes">Resultado operacional (Mês)</div>
         <div class="v" id="resLucroOperMes">—</div>
-        <div class="sub" id="resLucroOperDelta">—</div>
+        <div class="sub" id="resLucroOperDelta" style="display:none"></div>
         <div class="home-lucro row2">
           <div class="mini">
             <div class="k">R$/kg</div>
@@ -1286,12 +1376,12 @@ select{width:100%;padding:11px 10px;border-radius:14px;border:1px solid var(--li
     <div class="per" id="cliInatPeriodo">—</div>
   </div>
 
-  <div class="section">
+  <div class="section" id="cliInatSection90">
     <div class="h2"><div class="left">+90 dias</div><div class="right" id="cliInat90Hint">Base completa</div></div>
     <div class="plist" id="cliInatList90"></div>
   </div>
 
-  <div class="section">
+  <div class="section" id="cliInatSection60">
     <div class="h2"><div class="left">+60 dias</div><div class="right" id="cliInat60Hint">Sem duplicar +90</div></div>
     <div class="plist" id="cliInatList60"></div>
   </div>
@@ -1419,6 +1509,13 @@ let VENDEDORES = [];
 const fmtBRL = (n) => (n==null || isNaN(n)) ? "—" : n.toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
 const fmtNum = (n, d=0) => (n==null || isNaN(n)) ? "—" : n.toLocaleString("pt-BR", {minimumFractionDigits:d, maximumFractionDigits:d});
 const fmtKg  = (n, d=2) => (n==null || isNaN(n)) ? "—" : (n.toLocaleString("pt-BR", {minimumFractionDigits:d, maximumFractionDigits:d}) + " kg");
+const fmtBRLCompact = (n) => {
+  if(n==null || isNaN(n)) return "—";
+  const abs = Math.abs(Number(n)||0);
+  if(abs >= 1000000) return "R$ " + (abs/1000000).toLocaleString("pt-BR", {minimumFractionDigits:2, maximumFractionDigits:2}) + " mi";
+  if(abs >= 1000) return "R$ " + (abs/1000).toLocaleString("pt-BR", {minimumFractionDigits:0, maximumFractionDigits:0}) + " mil";
+  return fmtBRL(abs);
+};
 
 // --- Status do mês (Parcial x Fechado) ---
 function monthKeyFromDate(d){
@@ -2266,12 +2363,18 @@ const vendorListBase=distinct(empresaRows,"vendedor");
     // Clientes inativos (base completa), respeitando filtros atuais de Time/Produto/Vendedor
     (function(){
       const inactiveAll = getInactiveClientsData();
-      const c90 = inactiveAll.filter(x=>x.daysAll!=null && x.daysAll>=90).length;
-      const c60 = inactiveAll.filter(x=>x.daysAll!=null && x.daysAll>=60 && x.daysAll<90).length;
-      setTxt("cliInat60", String(c60));
-      setTxt("cliInat90", String(c90));
+      const list90 = inactiveAll.filter(x=>x.daysAll!=null && x.daysAll>=90);
+      const list60 = inactiveAll.filter(x=>x.daysAll!=null && x.daysAll>=60 && x.daysAll<90);
+      const c90 = list90.length;
+      const c60 = list60.length;
+      renderInactiveSummary("cliInat60", c60, sum(list60,"kgAll"), sum(list60,"valorAll"));
+      renderInactiveSummary("cliInat90", c90, sum(list90,"kgAll"), sum(list90,"valorAll"));
       const inatCard = document.getElementById("cardCliInativos");
       if(inatCard) inatCard.onclick = ()=>openInactiveClientsDetail();
+      const inat60Card = document.getElementById("cliInat60Card");
+      const inat90Card = document.getElementById("cliInat90Card");
+      if(inat60Card) inat60Card.onclick = (ev)=>{ ev.stopPropagation(); openInactiveClientsDetail(60); };
+      if(inat90Card) inat90Card.onclick = (ev)=>{ ev.stopPropagation(); openInactiveClientsDetail(90); };
     })();
 
     const q = (state.cliQuery||"").trim().toLowerCase();
@@ -2437,36 +2540,20 @@ const vendorListBase=distinct(empresaRows,"vendedor");
     setTxt("resLucroOperKgMes", lucroOperKgMes==null ? "—" : (fmtBRL(lucroOperKgMes)+"/kg"));
     setTxt("resMargemOperMes", margemOperMes==null ? "—" : fmtPct(margemOperMes));
 
-    // Comparação vs mês anterior (resultado operacional)
-    (function(){
-      const prevRef = prevMesRef(state.ano, state.mes_num||1);
-      // calcula lucro operacional do mês anterior com a mesma lógica
-      const [py,pm] = prevRef.split("-").map(x=>Number(x));
-      const prevRows = getFilteredRows({ano:py, mes_num:pm, time:state.time, produto:state.produto, vendedor:(state.vendedor||"")});
-      const prevFat = sum(prevRows,"valor_bruto");
-      const prevKg  = sum(prevRows,"peso");
-      const prevLucroCom = sum(prevRows,"lucro");
-      const prevCostRows = (typeof CUSTOS_OP!=="undefined") ? CUSTOS_OP.filter(x=>x.mes_ref===prevRef) : [];
-      const prevCkg = prevCostRows.reduce((acc,x)=>acc+(Number(x.Custo_Kg)||0),0);
-      const prevCusto = (prevKg>0)?(prevKg*prevCkg):0;
-      const prevLucroOp = prevLucroCom - prevCusto;
-      const d = (prevKg>0 && prevCkg>0 && kgMes>0 && custoKgMes>0) ? pctDelta(lucroOperMes, prevLucroOp) : null;
-      const lblPrev = getMesLabel(py, pm);
-      const deltaEl = document.getElementById("resLucroOperDelta");
-      if(d==null){
-        if(deltaEl){
-          deltaEl.className = "sub delta-chip neutral";
-          deltaEl.textContent = "—";
-        }
-      }else{
-        const dir = d>=0 ? "up" : "down";
-        const arrow = d>=0 ? "▲" : "▼";
-        if(deltaEl){
-          deltaEl.className = `sub delta-chip ${dir}`;
-          deltaEl.textContent = `${arrow} ${fmtPct(Math.abs(d))} vs ${lblPrev}`;
-        }
+    const resLucroOperMesEl = document.getElementById("resLucroOperMes");
+    if(resLucroOperMesEl){
+      resLucroOperMesEl.classList.remove("res-op-positive","res-op-negative");
+      if(kgMes>0 && custoKgMes>0){
+        if(lucroOperMes > 0) resLucroOperMesEl.classList.add("res-op-positive");
+        else if(lucroOperMes < 0) resLucroOperMesEl.classList.add("res-op-negative");
       }
-    })();
+    }
+
+    const deltaEl = document.getElementById("resLucroOperDelta");
+    if(deltaEl){
+      deltaEl.textContent = "";
+      deltaEl.style.display = "none";
+    }
 
 
     // Operacional (ano): soma mês a mês (1..mes selecionado), respeitando filtros do ano
@@ -2836,6 +2923,18 @@ function openProductDetail(produto){
 }
 
 
+function renderInactiveSummary(elId, count, kg, valor){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  el.innerHTML = `
+    <span class="item label">${count} cliente(s)</span>
+    <span class="sep">|</span>
+    <span class="item">${fmtNum(kg||0,0)} kg</span>
+    <span class="sep">|</span>
+    <span class="item">${fmtBRLCompact(valor||0)}</span>
+  `;
+}
+
 function getClientBaseRowsForInactivity(){
   return BASE.filter(r=>{
     if(state.time && state.time!=="" && r.time!==state.time) return false;
@@ -2913,7 +3012,7 @@ function renderInactiveClientList(listId, items, bucket){
   });
 }
 
-function openInactiveClientsDetail(){
+function openInactiveClientsDetail(bucket){
   const el = document.getElementById("cliInatDetail");
   if(el) el.classList.add("open");
   const per = document.getElementById("cliInatPeriodo");
@@ -2928,8 +3027,12 @@ function openInactiveClientsDetail(){
   const list60 = all.filter(x=>x.daysAll>=60 && x.daysAll<90);
   const h90 = document.getElementById("cliInat90Hint");
   const h60 = document.getElementById("cliInat60Hint");
+  const sec90 = document.getElementById("cliInatSection90");
+  const sec60 = document.getElementById("cliInatSection60");
   if(h90) h90.textContent = `${list90.length} cliente(s)`;
   if(h60) h60.textContent = `${list60.length} cliente(s)`;
+  if(sec90) sec90.style.display = (!bucket || bucket===90) ? "block" : "none";
+  if(sec60) sec60.style.display = (!bucket || bucket===60) ? "block" : "none";
   renderInactiveClientList("cliInatList90", list90, 90);
   renderInactiveClientList("cliInatList60", list60, 60);
 }
