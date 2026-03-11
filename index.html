@@ -1109,6 +1109,67 @@ select{width:100%;padding:11px 10px;border-radius:14px;border:1px solid var(--li
 .res-rent-scope{display:flex;justify-content:flex-end;gap:8px;margin:8px 0 14px;}
 .rent-card,.rent-row,.rent-row .left,.rent-row .right{min-width:0;}
 
+.res-ano-card{
+  padding:22px 18px 24px;
+  min-height:250px;
+}
+.res-ano-card .k{
+  margin-bottom:14px;
+}
+.res-ano-card .v{
+  line-height:1.03;
+  margin-bottom:18px;
+}
+.res-ano-card .res-meta-bar-wrap{
+  margin-top:10px;
+}
+.res-ano-card .hbar{
+  height:20px;
+}
+.res-ano-card .pct-tip{
+  top:-18px;
+  font-size:12px;
+}
+.res-ano-card .res-proj-row{
+  margin-top:18px;
+}
+.res-fat-card{
+  position:relative;
+  padding:22px 18px 24px;
+  min-height:220px;
+}
+.res-fat-card .k{
+  margin-bottom:14px;
+}
+.res-fat-card .v{
+  line-height:1.03;
+  margin-bottom:18px;
+}
+.res-fat-card .s{
+  margin-top:0 !important;
+  padding-right:56px;
+}
+.res-fat-card .click-indicator{
+  position:absolute;
+  right:18px;
+  bottom:18px;
+  width:38px;
+  height:38px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.04);
+  color:rgba(232,238,252,.82);
+  font-size:18px;
+  font-weight:900;
+}
+@media (max-width:520px){
+  .res-ano-card{min-height:262px;}
+  .res-fat-card{min-height:232px;}
+}
+
 </style>
 </head>
 <body>
@@ -1651,14 +1712,10 @@ select{width:100%;padding:11px 10px;border-radius:14px;border:1px solid var(--li
     <div class="res-subview active" id="resSubviewResultados">
     <div class="home-cards">
       <!-- Meta anual (igual Home) -->
-      <div class="home-card resCard" id="cardMetaAnual">
+      <div class="home-card resCard res-ano-card" id="cardMetaAnual">
         <div>
           <div class="k">Meta (Ano)</div>
           <div class="v" id="resMetaAnualVal">R$ 50.000.000,00</div>
-          <div class="sub">
-            <span>Faturamento acumulado</span>
-            <span style="float:right;font-weight:700;" id="resFatAnoMeta">—</span>
-          </div>
           <div class="res-meta-bar-wrap">
             <div class="hbar"><div id="resMetaBar"></div></div>
             <div class="pct-tip" id="resMetaPct">—</div>
@@ -1668,13 +1725,13 @@ select{width:100%;padding:11px 10px;border-radius:14px;border:1px solid var(--li
       </div>
 
       <!-- Faturamento acumulado (Ano) (clicável) -->
-      <div class="home-card resCard" id="cardFatAno" style="cursor:pointer;">
+      <div class="home-card resCard res-fat-card" id="cardFatAno" style="cursor:pointer;">
         <div class="k">Faturamento acumulado (Ano)</div>
         <div class="v" id="resFatAnoVal">—</div>
-        <div class="s" style="margin-top:6px;font-weight:600;">
+        <div class="s" style="font-weight:600;">
           <span id="resKgAnoLine">—</span>
         </div>
-        <div class="sub" style="margin-top:8px;">Clique para ver por mês.</div>
+        <div class="click-indicator" aria-hidden="true">›</div>
       </div>
 
       <!-- Ano (Resumo) -->
