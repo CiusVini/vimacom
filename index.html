@@ -1189,6 +1189,67 @@ select{width:100%;padding:11px 10px;border-radius:14px;border:1px solid var(--li
   }
 }
 
+
+/* Indicador visual para cards clicáveis */
+.click-hint-host{position:relative;}
+.click-hint-host .click-indicator{
+  position:absolute;
+  right:14px;
+  bottom:14px;
+  width:38px;
+  height:38px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(46,204,113,.18);
+  background:rgba(46,204,113,.08);
+  color:rgba(46,204,113,.95);
+  font-size:24px;
+  font-weight:900;
+  line-height:1;
+  box-shadow:0 0 0 1px rgba(46,204,113,.10) inset, 0 8px 22px rgba(46,204,113,.12);
+  pointer-events:none;
+}
+.click-hint-host:hover .click-indicator{
+  box-shadow:0 0 0 1px rgba(46,204,113,.14) inset, 0 10px 26px rgba(46,204,113,.16);
+}
+.pline.click-hint-host,
+.rent-row.click-hint-host,
+.inat-row.click-hint-host{
+  padding-right:64px;
+}
+.pline.click-hint-host .click-indicator,
+.rent-row.click-hint-host .click-indicator,
+.inat-row.click-hint-host .click-indicator{
+  top:50%;
+  bottom:auto;
+  transform:translateY(-50%);
+}
+.card.click-hint-host{
+  padding-bottom:58px;
+}
+.home-card.click-hint-host{
+  padding-bottom:64px;
+}
+.home-card.home-meta.click-hint-host{
+  padding-bottom:16px;
+}
+@media (max-width:520px){
+  .click-hint-host .click-indicator{
+    width:36px;
+    height:36px;
+    right:12px;
+    bottom:12px;
+    font-size:22px;
+  }
+  .pline.click-hint-host,
+  .rent-row.click-hint-host,
+  .inat-row.click-hint-host{
+    padding-right:60px;
+  }
+}
+
 /* animação suave */
 #resMetaBar{
   transition:width .7s ease;
@@ -1755,7 +1816,6 @@ select{width:100%;padding:11px 10px;border-radius:14px;border:1px solid var(--li
         <div class="s" style="font-weight:600;">
           <span id="resKgAnoLine">—</span>
         </div>
-        <div class="click-indicator" aria-hidden="true">›</div>
       </div>
 
       <!-- Ano (Resumo) -->
@@ -2478,6 +2538,20 @@ function openLucroDetail(){
 }
 
 
+
+function attachClickHint(el){
+  if(!el) return el;
+  el.classList.add("click-hint-host");
+  if(!el.querySelector(":scope > .click-indicator")){
+    const hint=document.createElement("span");
+    hint.className="click-indicator";
+    hint.setAttribute("aria-hidden","true");
+    hint.textContent="›";
+    el.appendChild(hint);
+  }
+  return el;
+}
+
 function renderRentList(containerId, items, opts={}){
   const el=document.getElementById(containerId);
   if(!el) return;
@@ -2493,6 +2567,7 @@ function renderRentList(containerId, items, opts={}){
     const badge = opts.badgeFirst && idx===0 ? '<div class="meta">★ Destaque do período</div>' : `<div class="meta">${item.meta||""}</div>`;
     const clickable = !!item.onClick;
     row.className="rent-row" + (clickable ? " clickable" : "");
+    if(clickable) attachClickHint(row);
     row.innerHTML = `
       <div class="left">
         <div class="name">${item.name || "—"}</div>
@@ -3103,6 +3178,7 @@ const vendorListBase=distinct(empresaRows,"vendedor");
         </div>
       `;
       featured.onclick = ()=>openProductDetail(top.produto);
+      attachClickHint(featured);
     }
   }
 
@@ -3124,6 +3200,7 @@ const vendorListBase=distinct(empresaRows,"vendedor");
         </div>
       `;
       row.addEventListener("click", ()=>openProductDetail(p.produto));
+      attachClickHint(row);
       list.appendChild(row);
     }
   }
@@ -3192,6 +3269,7 @@ const vendorListBase=distinct(empresaRows,"vendedor");
       card.style.cursor = 'default';
     }else{
       card.addEventListener("click", ()=>openVendorDetail(s.vendedor));
+      attachClickHint(card);
     }
     carousel.appendChild(card);
   }
@@ -3362,11 +3440,11 @@ const vendorListBase=distinct(empresaRows,"vendedor");
       if(aux90) aux90.textContent = `${fmtKg(sum(list90,"kgAll"),0)} • ${fmtBRLCompact(sum(list90,"valorAll"))}`;
 
       const inatCard = document.getElementById("cardCliInativos");
-      if(inatCard) inatCard.onclick = ()=>openInactiveClientsDetail();
+      if(inatCard) { inatCard.onclick = ()=>openInactiveClientsDetail(); }
 
       const bindKey = (el, bucket)=>{
         if(!el) return;
-        el.onclick = (ev)=>{ ev.stopPropagation(); openInactiveClientsDetail(bucket); };
+        el.onclick = (ev)=>{ ev.stopPropagation(); openInactiveClientsDetail(bucket); }; attachClickHint(el);
         el.onkeydown = (ev)=>{
           if(ev.key==="Enter" || ev.key===" "){
             ev.preventDefault();
@@ -3402,6 +3480,8 @@ const vendorListBase=distinct(empresaRows,"vendedor");
         pctTxt.textContent="—";
         ring.style.strokeDashoffset = "263.89";
         card.onclick=null;
+        card.classList.remove("click-hint-host");
+        const __hint=card.querySelector(":scope > .click-indicator"); if(__hint) __hint.remove();
       }else{
         const top=filteredCli[0];
         n.textContent = top.cliente;
@@ -3419,6 +3499,7 @@ const vendorListBase=distinct(empresaRows,"vendedor");
         ring.style.strokeDashoffset = String(pct==null ? C : (C*(1-pct)));
 
         card.onclick = ()=>openClientDetail(top.cliente);
+        attachClickHint(card);
       }
     }
 
@@ -3448,6 +3529,7 @@ const vendorListBase=distinct(empresaRows,"vendedor");
             </div>
           `;
           row.addEventListener("click", ()=>openClientDetail(c.cliente));
+          attachClickHint(row);
           list.appendChild(row);
         }
       }
@@ -3714,9 +3796,9 @@ const vendorListBase=distinct(empresaRows,"vendedor");
 
     // Cards: clique nos outros cards apenas rola para o topo (comportamento leve)
     const scrollTop = ()=>{ try{ window.scrollTo({top:0,behavior:"smooth"});}catch(e){ window.scrollTo(0,0);} };
-    const c1=document.getElementById("cardMetaAnual"); if(c1) c1.onclick=scrollTop;
-    const c2=document.getElementById("cardFatMes"); if(c2) c2.onclick=scrollTop;
-    const c3=document.getElementById("cardResComMes"); if(c3) c3.onclick=scrollTop;
+    const c1=document.getElementById("cardMetaAnual"); if(c1) { c1.onclick=scrollTop; }
+    const c2=document.getElementById("cardFatMes"); if(c2) { c2.onclick=scrollTop; }
+    const c3=document.getElementById("cardResComMes"); if(c3) { c3.onclick=scrollTop; }
 
   }catch(e){
     console.warn("render resultados error", e);
@@ -4606,14 +4688,16 @@ if(resTabBtnRentabilidade){
 const __cardFatAno = document.getElementById("cardFatAno");
 if(__cardFatAno){
   __cardFatAno.addEventListener("click", ()=>{ openResAnoDetail(); });
+  attachClickHint(__cardFatAno);
 }
 const __cardCustoOpMes = document.getElementById("cardCustoOpMes");
 if(__cardCustoOpMes){
   __cardCustoOpMes.addEventListener("click", ()=>{ openResCustoDetail(); });
+  attachClickHint(__cardCustoOpMes);
 }
 
 const homeLucroCardEl = document.getElementById("homeLucroCard");
-if(homeLucroCardEl){ homeLucroCardEl.addEventListener("click", openLucroDetail); }
+if(homeLucroCardEl){ homeLucroCardEl.addEventListener("click", openLucroDetail); attachClickHint(homeLucroCardEl); }
 bindBackButton("btnBack", "detail");
 bindBackButton("btnBackProduto", "pdetail");
 bindBackButton("btnBackCliente", "cdetail");
