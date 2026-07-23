@@ -10,11 +10,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="VIMACOM"/>
-<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png"/>
-<link rel="apple-touch-icon-precomposed" sizes="180x180" href="icon-180.png"/>
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png"/>
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png"/>
-<link rel="manifest" href="manifest.webmanifest?v=20260313a"/>
+<link rel="manifest" href="../manifest.json"/>
+<link rel="apple-touch-icon" sizes="180x180" href="../assets/icon-180.png"/>
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png"/>
+<link rel="icon" type="image/png" sizes="16x16" href="../assets/favicon-16.png"/>
 <title>VIMACOM — Painel</title>
 <style>
 /* (CSS) */
@@ -1369,7 +1368,7 @@ select{width:100%;padding:11px 10px;border-radius:14px;border:1px solid var(--li
 <body>
 
 <div id="bootSplash" aria-hidden="true">
-  <img src="logo.png" alt="VIMACOM" />
+  <img src="../assets/logo.png" alt="VIMACOM" />
   <div class="spinner"></div>
   <div class="txt">Carregando painel…</div>
 </div>
@@ -1416,7 +1415,7 @@ select{width:100%;padding:11px 10px;border-radius:14px;border:1px solid var(--li
 <!-- LOGIN SCREEN -->
 <div id="loginScreen" class="login-screen">
   <div class="login-box">
-    <img src="logo.png" alt="VIMACOM" class="login-logo">
+    <img src="../assets/logo.png" alt="VIMACOM" class="login-logo">
     <select id="loginUser" class="login-select">
       <option value="diretoria">Diretoria</option>
       <option value="vieira">Vieira</option>
@@ -1441,7 +1440,7 @@ select{width:100%;padding:11px 10px;border-radius:14px;border:1px solid var(--li
 
     <div class="topbar">
       <div class="brand">
-        <img src="logo.png" alt="VIMACOM" />
+        <img src="../assets/logo.png" alt="VIMACOM" />
       </div>
       <div class="topbar-actions">
         <div class="user-badge" id="userBadgeHome">—</div>
@@ -2241,17 +2240,27 @@ let METAS_MENSAL = {"Vieira":{"2026-01":1770000.0,"2026-02":1950000.0,"2026-03":
 // Cole aqui a URL publicada do Apps Script depois de implantar como Web App.
 const VENDAS_API_URL = "https://script.google.com/macros/s/AKfycby2XjarPbBOp5CBFu-PauGtnvkOF8FP7sTqeQ2Bb5ZJqOrt5Mz6i4i-K37DxUWluB27/exec";
 
-async function carregarDadosVendasDaAPI(){
-  if(!VENDAS_API_URL) return false;
+// Agora os dados só chegam depois de um login válido: o front-end não fica
+// mais com a lista de usuários/senhas, e o backend também não devolve nada
+// sem um token de sessão válido.
+let _vendasReadyResolve;
+window.__vendasDataPromise = new Promise(function(resolve){ _vendasReadyResolve = resolve; });
+
+async function carregarDadosVendasDaAPI(token){
+  if(!VENDAS_API_URL || !token) return false;
   try{
-    const url = VENDAS_API_URL + (VENDAS_API_URL.includes("?") ? "&" : "?") + "_=" + Date.now();
+    const url = VENDAS_API_URL + (VENDAS_API_URL.includes("?") ? "&" : "?") + "_=" + Date.now() + "&token=" + encodeURIComponent(token);
     const resp = await fetch(url, { cache: "no-store" });
     if(!resp.ok) throw new Error("HTTP " + resp.status);
     const json = await resp.json();
+    if(!json.ok) throw new Error(json.erro || "Sessão inválida.");
 
-    if(Array.isArray(json.base) && json.base.length){ BASE = json.base; }
+    if(Array.isArray(json.base)){ BASE = json.base; }
     if(Array.isArray(json.custos)){ CUSTOS_OP = json.custos; }
     if(json.metas && typeof json.metas === "object"){ METAS_MENSAL = json.metas; }
+
+    window.__vendasPerfilAtual = json.perfil || "vendedor";
+    window.__vendasVendedorAtual = json.vendedor || "";
 
     if(typeof buildLookups === "function") buildLookups();
     if(typeof state !== "undefined"){
@@ -2270,12 +2279,30 @@ async function carregarDadosVendasDaAPI(){
     window.__vendasApiStatus = { ok:true, atualizadoEm: json.atualizadoEm || null };
     return true;
   }catch(e){
-    console.warn("Falha ao carregar API Vendas. Usando dados internos de fallback.", e);
+    console.warn("Falha ao carregar API Vendas.", e);
     window.__vendasApiStatus = { ok:false, erro: String(e && (e.message || e)) };
     return false;
   }
 }
-window.__vendasDataPromise = carregarDadosVendasDaAPI();
+
+async function loginServidor_(usuario, senha){
+  const resp = await fetch(VENDAS_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action: "login", usuario: usuario, senha: senha })
+  });
+  return await resp.json();
+}
+
+async function logoutServidor_(token){
+  try{
+    await fetch(VENDAS_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "logout", token: token })
+    });
+  }catch(e){}
+}
 let METAS = {};
 function applyMetasContext(ano, mes_num){
   const mesKey = `${ano}-${String(mes_num).padStart(2,"0")}`;
@@ -4989,15 +5016,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 <script>
   (function(){
-    const USERS = {
-      diretoria: { nome:"Diretoria", senha:"diretoria@2026", perfil:"diretoria", vendedor:"" },
-      vieira: { nome:"Vieira", senha:"vieira", perfil:"vendedor", vendedor:"Vieira" },
-      debora: { nome:"Débora", senha:"debora", perfil:"vendedor", vendedor:"Débora" },
-      ricardo: { nome:"Ricardo", senha:"ricardo", perfil:"vendedor", vendedor:"Ricardo" },
-      nazareno: { nome:"Nazareno", senha:"nazareno", perfil:"vendedor", vendedor:"Nazareno" },
-      osvaldo: { nome:"Osvaldo", senha:"osvaldo", perfil:"vendedor", vendedor:"Osvaldo" },
-      brunadias: { nome:"Bruna Dias", senha:"brunadias", perfil:"vendedor", vendedor:"Bruna Dias" }
-    };
+    // As senhas não existem mais aqui — ficam só no Apps Script, em hash.
+    // O front-end só guarda um token de sessão temporário depois do login.
 
     const screen = document.getElementById("loginScreen");
     const btn = document.getElementById("loginBtn");
@@ -5006,49 +5026,96 @@ document.addEventListener('DOMContentLoaded', async () => {
     const err = document.getElementById("loginError");
     const logoutBtn = document.getElementById("logoutBtn");
 
-    function persistAuth(key){
-      try{ localStorage.setItem("vimacom_auth_user", key); }catch(e){}
+    function persistSession(token, key, nome){
+      try{
+        localStorage.setItem("vimacom_session_token", token);
+        localStorage.setItem("vimacom_auth_user", key);
+        localStorage.setItem("vimacom_auth_nome", nome || key);
+      }catch(e){}
     }
-    function clearAuth(){
-      try{ localStorage.removeItem("vimacom_auth_user"); }catch(e){}
+    function clearSession(){
+      try{
+        localStorage.removeItem("vimacom_session_token");
+        localStorage.removeItem("vimacom_auth_user");
+        localStorage.removeItem("vimacom_auth_nome");
+      }catch(e){}
     }
-    function applyAuth(key){
-      const user = USERS[key];
-      if(!user) return;
-      state.auth = { key, nome:user.nome, perfil:user.perfil };
-      state.vendedorBloqueado = user.perfil === "vendedor" ? user.vendedor : "";
+    function aplicarSessao(key, nome, perfil, vendedor){
+      state.auth = { key, nome, perfil };
+      state.vendedorBloqueado = perfil === "vendedor" ? vendedor : "";
       state.vendedor = state.vendedorBloqueado || "";
       screen.style.display = "none";
       applyRoleUI();
-      setView((user.perfil === "vendedor" && state.view === "resultados") ? "home" : (state.view || "home"));
+      setView((perfil === "vendedor" && state.view === "resultados") ? "home" : (state.view || "home"));
       render();
     }
-    function tryLogin(){
+
+    async function tryLogin(){
       const key = userSel.value;
-      const user = USERS[key];
-      const pass = normalizarTexto(input.value).replace(/\s+/g, "").toLowerCase();
-      const expected = normalizarTexto(user && user.senha).replace(/\s+/g, "").toLowerCase();
-      if(user && pass === expected){
-        err.style.display = "none";
+      const senha = String(input.value || "").trim();
+      btn.disabled = true;
+      err.style.display = "none";
+      try{
+        const resultado = await loginServidor_(key, senha);
+        if(!resultado || !resultado.ok){
+          err.textContent = (resultado && resultado.erro) || "Usuário ou senha incorretos";
+          err.style.display = "block";
+          return;
+        }
         input.value = "";
-        persistAuth(key);
-        applyAuth(key);
-      }else{
+        persistSession(resultado.token, key, resultado.nome);
+        const carregou = await carregarDadosVendasDaAPI(resultado.token);
+        if(!carregou){
+          err.textContent = "Login certo, mas houve falha ao carregar os dados. Tente de novo.";
+          err.style.display = "block";
+          clearSession();
+          return;
+        }
+        _vendasReadyResolve();
+        aplicarSessao(key, resultado.nome, resultado.perfil, resultado.vendedor);
+      }catch(e){
+        err.textContent = "Não foi possível entrar. Verifique sua conexão.";
         err.style.display = "block";
+      }finally{
+        btn.disabled = false;
       }
     }
-    const saved = (()=>{ try{ return localStorage.getItem("vimacom_auth_user"); }catch(e){ return null; } })();
-    if(saved && USERS[saved]){
-      applyAuth(saved);
-    }else{
-      screen.style.display = "flex";
-      applyRoleUI();
+
+    async function tentarSessaoSalva(){
+      let token, key, nome;
+      try{
+        token = localStorage.getItem("vimacom_session_token");
+        key = localStorage.getItem("vimacom_auth_user");
+        nome = localStorage.getItem("vimacom_auth_nome");
+      }catch(e){}
+
+      if(!token || !key){
+        screen.style.display = "flex";
+        applyRoleUI();
+        _vendasReadyResolve();
+        return;
+      }
+
+      const carregou = await carregarDadosVendasDaAPI(token);
+      if(!carregou){
+        clearSession();
+        screen.style.display = "flex";
+        applyRoleUI();
+        _vendasReadyResolve();
+        return;
+      }
+
+      _vendasReadyResolve();
+      aplicarSessao(key, nome || key, window.__vendasPerfilAtual || "vendedor", window.__vendasVendedorAtual || "");
     }
 
     btn.addEventListener("click", tryLogin);
     input.addEventListener("keydown", e=>{ if(e.key==="Enter") tryLogin(); });
-    window.__vimacomLogout = function(){
-      clearAuth();
+    window.__vimacomLogout = async function(){
+      let token;
+      try{ token = localStorage.getItem("vimacom_session_token"); }catch(e){}
+      if(token) await logoutServidor_(token);
+      clearSession();
       state.auth = null;
       state.vendedorBloqueado = "";
       state.vendedor = "";
@@ -5060,6 +5127,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(logoutBtn){
       logoutBtn.addEventListener("click", window.__vimacomLogout);
     }
+
+    tentarSessaoSalva();
   })();
 </script>
 
@@ -5219,7 +5288,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if('serviceWorker' in navigator){
     window.addEventListener('load', async ()=>{
       try{
-        const reg = await navigator.serviceWorker.register('./sw.js?v=' + APP_VERSION, { updateViaCache: 'none' });
+        const reg = await navigator.serviceWorker.register('../sw.js?v=' + APP_VERSION, { updateViaCache: 'none' });
         try{ await reg.update(); }catch(_e){}
         if(reg.waiting) showUpdateToast();
         reg.addEventListener('updatefound', ()=>{
@@ -5237,6 +5306,66 @@ document.addEventListener('DOMContentLoaded', async () => {
       }catch(e){ console.warn('SW registration failed', e); }
     });
   }
+})();
+</script>
+
+
+
+<style id="diretoria-back-style">
+.diretoria-panel-btn{
+  position:fixed;right:16px;bottom:calc(96px + env(safe-area-inset-bottom));z-index:1800;
+  display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border-radius:999px;
+  border:1px solid rgba(46,204,113,.28);background:rgba(18,26,43,.94);color:#e8eefc;
+  font:900 13px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  box-shadow:0 14px 30px rgba(0,0,0,.34),0 0 0 1px rgba(255,255,255,.04) inset;
+  backdrop-filter:blur(12px);cursor:pointer;text-decoration:none
+}
+.diretoria-panel-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.35;stroke-linecap:round;stroke-linejoin:round}
+.diretoria-panel-btn:active{transform:scale(.985)}
+.drawer-exec-button{
+  width:100%;margin:16px 0 0;padding:13px 14px;border-radius:16px;border:1px solid rgba(46,204,113,.28);
+  background:rgba(46,204,113,.10);color:#e8eefc;font:900 14px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer
+}
+.drawer-exec-button svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.35;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:520px){.diretoria-panel-btn{right:14px;bottom:calc(92px + env(safe-area-inset-bottom));min-height:42px;padding:0 13px;font-size:12px}}
+</style>
+
+<script id="diretoria-back-script">
+(function(){
+  const HOME_DIRETORIA_URL = '../';
+  function irPainel(){ window.location.href = HOME_DIRETORIA_URL; }
+  function svgHome(){ return '<svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9 20v-6h6v6"/></svg>'; }
+  function criarBotaoFlutuante(){
+    if(document.getElementById('diretoriaPanelBtn')) return;
+    const btn=document.createElement('button');
+    btn.id='diretoriaPanelBtn';
+    btn.type='button';
+    btn.className='diretoria-panel-btn';
+    btn.innerHTML=svgHome()+'<span>Painel</span>';
+    btn.addEventListener('click', irPainel);
+    document.body.appendChild(btn);
+  }
+  function inserirNoDrawer(){
+    const drawer=document.getElementById('drawer');
+    if(!drawer || document.getElementById('drawerExecBtn')) return false;
+    const btn=document.createElement('button');
+    btn.id='drawerExecBtn';
+    btn.type='button';
+    btn.className='drawer-exec-button';
+    btn.innerHTML=svgHome()+'<span>Voltar ao Painel Executivo</span>';
+    btn.addEventListener('click', irPainel);
+    const btnrow = drawer.querySelector('.btnrow');
+    if(btnrow && btnrow.parentNode){ btnrow.insertAdjacentElement('afterend', btn); }
+    else { drawer.appendChild(btn); }
+    return true;
+  }
+  function init(){
+    const temDrawer = inserirNoDrawer();
+    if(!temDrawer) criarBotaoFlutuante();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();
 </script>
 
